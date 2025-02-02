@@ -32,37 +32,90 @@ int main() {
 } 
 //========================================
 //Parallel Prefix Sum
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <omp.h> 
- 
-#define N 1000000 
- 
-void prefix_sum(int arr[N], int prefix[N]) { 
-    prefix[0] = arr[0]; 
- 
-    #pragma omp parallel for 
-    for (int i = 1; i < N; i++) { 
-        prefix[i] = prefix[i - 1] + arr[i]; 
-    } 
-} 
- 
-int main() { 
-    int arr[N], prefix[N]; 
- 
-    // Initialize array with random values 
-    for (int i = 0; i < N; i++) { 
-        arr[i] = rand() % 10; 
-    } 
- 
-    double start_time = omp_get_wtime(); 
-    prefix_sum(arr, prefix); 
-    double end_time = omp_get_wtime(); 
- 
-    printf("Time taken: %f seconds\n", end_time - start_time); 
- 
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define N 1000000
+
+// Sequential prefix sum
+void prefix_sum_sequential(int arr[N], int prefix[N]) {
+    prefix[0] = arr[0];
+    for (int i = 1; i < N; i++) {
+        prefix[i] = prefix[i - 1] + arr[i];
+    }
+}
+
+// Parallel prefix sum using OpenMP
+void prefix_sum_parallel(int arr[N], int prefix[N]) {
+    int num_threads;
+
+    #pragma omp parallel
+    {
+        int id = omp_get_thread_num();
+        int nthrds = omp_get_num_threads();
+
+        #pragma omp single
+        num_threads = nthrds;
+
+        int chunk_size = N / nthrds;
+        int start = id * chunk_size;
+        int end = (id == nthrds - 1) ? N : (start + chunk_size);
+
+        // Local prefix sum for each thread
+        prefix[start] = arr[start];
+        for (int i = start + 1; i < end; i++) {
+            prefix[i] = prefix[i - 1] + arr[i];
+        }
+    }
+
+    // Accumulate sums from previous threads
+    for (int t = 1; t < num_threads; t++) {
+        int offset = t * (N / num_threads);
+        int add_value = prefix[offset - 1];
+
+        #pragma omp parallel for
+        for (int i = offset; i < (t == num_threads - 1 ? N : offset + (N / num_threads)); i++) {
+            prefix[i] += add_value;
+        }
+    }
+}
+
+int main() {
+    int arr[N], prefix_seq[N], prefix_par[N];
+
+    // Initialize array with random values
+    for (int i = 0; i < N; i++) {
+        arr[i] = rand() % 10;
+    }
+
+    double start_time, end_time;
+
+    // Sequential Prefix Sum
+    start_time = omp_get_wtime();
+    prefix_sum_sequential(arr, prefix_seq);
+    end_time = omp_get_wtime();
+    printf("Sequential Time: %f seconds\n", end_time - start_time);
+
+    // Parallel Prefix Sum
+    start_time = omp_get_wtime();
+    prefix_sum_parallel(arr, prefix_par);
+    end_time = omp_get_wtime();
+    printf("Parallel Time: %f seconds\n", end_time - start_time);
+
+    // Validation
+    for (int i = 0; i < N; i++) {
+        if (prefix_seq[i] != prefix_par[i]) {
+            printf("Mismatch at index %d!\n", i);
+            return 1;
+        }
+    }
+
+    printf("Prefix sums match!\n");
+
     return 0;
 }
+
 //-----------------------------------------
 // Parallel Breadth-First Search (BFS)
 #include <stdio.h> 
