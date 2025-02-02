@@ -1,0 +1,192 @@
+// Quick Sort
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define SIZE 100000
+
+// QuickSort Partition
+int partition(int arr[], int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; j++) {
+        if (arr[j] < pivot) {
+            i++;
+            int temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+    }
+    int temp = arr[i + 1];
+    arr[i + 1] = arr[high];
+    arr[high] = temp;
+    return i + 1;
+}
+
+// Sequential QuickSort
+void quicksort_seq(int arr[], int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quicksort_seq(arr, low, pi - 1);
+        quicksort_seq(arr, pi + 1, high);
+    }
+}
+
+// Parallel QuickSort
+void quicksort_par(int arr[], int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            quicksort_par(arr, low, pi - 1);
+
+            #pragma omp section
+            quicksort_par(arr, pi + 1, high);
+        }
+    }
+}
+
+int main() {
+    int arr_seq[SIZE], arr_par[SIZE];
+
+    // Initialize array with random values
+    for (int i = 0; i < SIZE; i++) {
+        arr_seq[i] = arr_par[i] = rand() % 100000;
+    }
+
+    // Sequential QuickSort
+    double seq_start = omp_get_wtime();
+    quicksort_seq(arr_seq, 0, SIZE - 1);
+    double seq_end = omp_get_wtime();
+
+    // Parallel QuickSort
+    double par_start = omp_get_wtime();
+    quicksort_par(arr_par, 0, SIZE - 1);
+    double par_end = omp_get_wtime();
+
+    // Verify correctness
+    int correct = 1;
+    for (int i = 0; i < SIZE; i++) {
+        if (arr_seq[i] != arr_par[i]) {
+            correct = 0;
+            break;
+        }
+    }
+
+    // Print results
+    printf("Sequential QuickSort Time: %.6f seconds\n", seq_end - seq_start);
+    printf("Parallel QuickSort Time:   %.6f seconds\n", par_end - par_start);
+    printf("Correctness Check: %s\n", correct ? "PASS" : "FAIL");
+
+    return 0;
+}
+//----------------------------------------------
+
+// Merge Sort
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define SIZE 100000
+
+// Merge function
+void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    int L[n1], R[n2];
+
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[m + 1 + j];
+
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+        } else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        arr[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+// Sequential MergeSort
+void mergesort_seq(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        mergesort_seq(arr, l, m);
+        mergesort_seq(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+}
+
+// Parallel MergeSort
+void mergesort_par(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            mergesort_par(arr, l, m);
+
+            #pragma omp section
+            mergesort_par(arr, m + 1, r);
+        }
+
+        merge(arr, l, m, r);
+    }
+}
+
+int main() {
+    int arr_seq[SIZE], arr_par[SIZE];
+
+    // Initialize array with random values
+    for (int i = 0; i < SIZE; i++) {
+        arr_seq[i] = arr_par[i] = rand() % 100000;
+    }
+
+    // Sequential MergeSort
+    double seq_start = omp_get_wtime();
+    mergesort_seq(arr_seq, 0, SIZE - 1);
+    double seq_end = omp_get_wtime();
+
+    // Parallel MergeSort
+    double par_start = omp_get_wtime();
+    mergesort_par(arr_par, 0, SIZE - 1);
+    double par_end = omp_get_wtime();
+
+    // Verify correctness
+    int correct = 1;
+    for (int i = 0; i < SIZE; i++) {
+        if (arr_seq[i] != arr_par[i]) {
+            correct = 0;
+            break;
+        }
+    }
+
+    // Print results
+    printf("Sequential MergeSort Time: %.6f seconds\n", seq_end - seq_start);
+    printf("Parallel MergeSort Time:   %.6f seconds\n", par_end - par_start);
+    printf("Correctness Check: %s\n", correct ? "PASS" : "FAIL");
+
+    return 0;
+}
