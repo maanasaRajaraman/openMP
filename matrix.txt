@@ -1,0 +1,62 @@
+// Parallel vs Sequential Matrix Multiplication
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define N 500 // Matrix size
+
+int A[N][N], B[N][N], C_seq[N][N], C_par[N][N];
+
+int main() {
+    // Initialize matrices A and B
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            A[i][j] = i + j;
+            B[i][j] = i - j;
+            C_seq[i][j] = 0;
+            C_par[i][j] = 0;
+        }
+    }
+
+    // Sequential Matrix Multiplication
+    double seq_start = omp_get_wtime();
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            for (int k = 0; k < N; k++) {
+                C_seq[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+    double seq_end = omp_get_wtime();
+
+    // Parallel Matrix Multiplication
+    double par_start = omp_get_wtime();
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            for (int k = 0; k < N; k++) {
+                C_par[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+    double par_end = omp_get_wtime();
+
+    // Verify correctness
+    int correct = 1;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            if (C_seq[i][j] != C_par[i][j]) {
+                correct = 0;
+                break;
+            }
+        }
+        if (!correct) break;
+    }
+
+    // Print results
+    printf("Sequential Time: %.6f seconds\n", seq_end - seq_start);
+    printf("Parallel Time:   %.6f seconds\n", par_end - par_start);
+    printf("Correctness Check: %s\n", correct ? "PASS" : "FAIL");
+
+    return 0;
+}
