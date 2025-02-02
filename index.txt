@@ -1,0 +1,39 @@
+algo.txt
+Dining Philosophers
+Producer Consumer
+Readers-writers
+Sleeping Barber
+banker's algorithm
+------------------------------------------------
+matrix.txt
+Matrix multiplication
+Parallel Matrix Determinant Calculation
+Parallel Convolution of Two Matrices 
+Matrix transposition
+------------------------------------------------
+sample.txt
+sum of natural numbers (for and reduction)
+loop carried dependence
+race condition
+Shared data
+------------------------------------------------
+sample1.txt
+Parallel Reduction for Maximum Value
+Parallel Prefix Sum
+BFS
+Floyd Warshall
+-------------------------------------------------
+sample2.txt
+Word Count in a Large Text File
+Solving a Triangular System
+Factorial
+Dot Product
+------------------------------------------------
+sample3.txt
+Histogram Calculation
+Parallel Sieve of Eratosthenes
+------------------------------------------------
+fft.txt
+pi.txt
+sort.txt
+------------------------------------------------
