@@ -1,0 +1,363 @@
+// 1) Dijkstra's Algorithm
+#include <stdio.h>
+#include <limits.h>
+#include <omp.h>
+#define V 5
+
+int minDistance(int dist[], int sptSet[]) {
+    int min = INT_MAX, min_index;
+    for (int v = 0; v < V; v++)
+        if (sptSet[v] == 0 && dist[v] <= min)
+            min = dist[v], min_index = v;
+    return min_index;
+}
+
+void dijkstra_sequential(int graph[V][V], int src, int dist[V]) {
+    int sptSet[V] = {0};
+    for (int i = 0; i < V; i++) dist[i] = INT_MAX;
+    dist[src] = 0;
+
+    for (int count = 0; count < V - 1; count++) {
+        int u = minDistance(dist, sptSet);
+        sptSet[u] = 1;
+
+        for (int v = 0; v < V; v++)
+            if (!sptSet[v] && graph[u][v] && dist[u] != INT_MAX && dist[u] + graph[u][v] < dist[v])
+                dist[v] = dist[u] + graph[u][v];
+    }
+}
+
+void dijkstra_parallel(int graph[V][V], int src, int dist[V]) {
+    int sptSet[V] = {0};
+    for (int i = 0; i < V; i++) dist[i] = INT_MAX;
+    dist[src] = 0;
+
+    for (int count = 0; count < V - 1; count++) {
+        int u = minDistance(dist, sptSet);
+        sptSet[u] = 1;
+
+        #pragma omp parallel for
+        for (int v = 0; v < V; v++)
+            if (!sptSet[v] && graph[u][v] && dist[u] != INT_MAX && dist[u] + graph[u][v] < dist[v])
+                dist[v] = dist[u] + graph[u][v];
+    }
+}
+
+int main() {
+    int graph[V][V] = {
+        {0, 6, 0, 1, 0},
+        {6, 0, 5, 2, 2},
+        {0, 5, 0, 0, 5},
+        {1, 2, 0, 0, 1},
+        {0, 2, 5, 1, 0}
+    };
+    int dist_seq[V], dist_par[V];
+
+    double start, end;
+
+    start = omp_get_wtime();
+    dijkstra_sequential(graph, 0, dist_seq);
+    end = omp_get_wtime();
+    printf("Sequential Time: %f seconds\n", end - start);
+
+    start = omp_get_wtime();
+    dijkstra_parallel(graph, 0, dist_par);
+    end = omp_get_wtime();
+    printf("Parallel Time: %f seconds\n", end - start);
+
+    for (int i = 0; i < V; i++) {
+        printf("Vertex %d: Seq = %d, Par = %d\n", i, dist_seq[i], dist_par[i]);
+    }
+
+    return 0;
+}
+// 2) Longest Common Subsequence (LCS)
+#include <stdio.h>
+#include <string.h>
+#include <omp.h>
+#include <time.h>
+
+#define MAX 1000
+
+// Sequential LCS
+int lcs_sequential(char* X, char* Y, int m, int n) {
+    int dp[MAX][MAX];
+
+    for (int i = 0; i <= m; i++) {
+        for (int j = 0; j <= n; j++) {
+            if (i == 0 || j == 0)
+                dp[i][j] = 0;
+            else if (X[i - 1] == Y[j - 1])
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            else
+                dp[i][j] = (dp[i - 1][j] > dp[i][j - 1]) ? dp[i - 1][j] : dp[i][j - 1];
+        }
+    }
+    return dp[m][n];
+}
+//---------------------------------------
+// Parallel LCS using OpenMP
+int lcs_parallel(char* X, char* Y, int m, int n) {
+    int dp[MAX][MAX];
+
+    // Initialize first row and column
+    for (int i = 0; i <= m; i++) dp[i][0] = 0;
+    for (int j = 0; j <= n; j++) dp[0][j] = 0;
+
+    // Diagonal (wavefront) parallelization
+    for (int k = 2; k <= m + n; k++) {
+        #pragma omp parallel for
+        for (int i = 1; i <= m; i++) {
+            int j = k - i;
+            if (j >= 1 && j <= n) {
+                if (X[i - 1] == Y[j - 1])
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                else
+                    dp[i][j] = (dp[i - 1][j] > dp[i][j - 1]) ? dp[i - 1][j] : dp[i][j - 1];
+            }
+        }
+    }
+    return dp[m][n];
+}
+
+int main() {
+    char X[] = "AGGTAB";
+    char Y[] = "GXTXAYB";
+    int m = strlen(X);
+    int n = strlen(Y);
+
+    double start, end;
+
+    // Sequential Execution
+    start = omp_get_wtime();
+    int lcs_seq = lcs_sequential(X, Y, m, n);
+    end = omp_get_wtime();
+    printf("Sequential LCS Length: %d\n", lcs_seq);
+    printf("Sequential Time: %f seconds\n", end - start);
+
+    // Parallel Execution
+    start = omp_get_wtime();
+    int lcs_par = lcs_parallel(X, Y, m, n);
+    end = omp_get_wtime();
+    printf("Parallel LCS Length: %d\n", lcs_par);
+    printf("Parallel Time: %f seconds\n", end - start);
+
+    return 0;
+}
+//----------------------------
+//integration
+// 3) Numerical Integration (Trapezoidal Rule)
+#include <stdio.h>
+#include <omp.h>
+#include <math.h>
+
+#define INTERVALS 1000000
+#define A 0.0  // Lower limit
+#define B 1.0  // Upper limit
+
+// Function to integrate
+double f(double x) {
+    return x * x;  // Example: f(x) = x^2
+}
+
+// Sequential Trapezoidal Rule
+double trapezoidal_sequential(double a, double b, int n) {
+    double h = (b - a) / n;
+    double sum = (f(a) + f(b)) / 2.0;
+
+    for (int i = 1; i < n; i++) {
+        sum += f(a + i * h);
+    }
+
+    return sum * h;
+}
+
+// Parallel Trapezoidal Rule using OpenMP
+double trapezoidal_parallel(double a, double b, int n) {
+    double h = (b - a) / n;
+    double sum = (f(a) + f(b)) / 2.0;
+
+    #pragma omp parallel for reduction(+:sum)
+    for (int i = 1; i < n; i++) {
+        sum += f(a + i * h);
+    }
+
+    return sum * h;
+}
+
+int main() {
+    double start, end;
+
+    // Sequential Execution
+    start = omp_get_wtime();
+    double result_seq = trapezoidal_sequential(A, B, INTERVALS);
+    end = omp_get_wtime();
+    printf("Sequential Result: %lf\n", result_seq);
+    printf("Sequential Time: %f seconds\n", end - start);
+
+    // Parallel Execution
+    start = omp_get_wtime();
+    double result_par = trapezoidal_parallel(A, B, INTERVALS);
+    end = omp_get_wtime();
+    printf("Parallel Result: %lf\n", result_par);
+    printf("Parallel Time: %f seconds\n", end - start);
+
+    return 0;
+}
+//--------------------------------
+// n queens
+// 4) N-Queens Problem (Backtracking)
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define N 8  // Change this for different board sizes
+
+// Check if a queen can be placed
+int is_safe(int board[N][N], int row, int col) {
+    int i, j;
+    for (i = 0; i < col; i++)
+        if (board[row][i]) return 0;
+
+    for (i = row, j = col; i >= 0 && j >= 0; i--, j--)
+        if (board[i][j]) return 0;
+
+    for (i = row, j = col; i < N && j >= 0; i++, j--)
+        if (board[i][j]) return 0;
+
+    return 1;
+}
+
+// Sequential N-Queens Solver
+int solve_nqueens_sequential(int board[N][N], int col) {
+    if (col >= N) return 1;
+
+    int solutions = 0;
+    for (int i = 0; i < N; i++) {
+        if (is_safe(board, i, col)) {
+            board[i][col] = 1;
+            solutions += solve_nqueens_sequential(board, col + 1);
+            board[i][col] = 0;
+        }
+    }
+    return solutions;
+}
+
+// Parallel N-Queens Solver using OpenMP
+int solve_nqueens_parallel() {
+    int solutions = 0;
+
+    #pragma omp parallel for reduction(+:solutions)
+    for (int i = 0; i < N; i++) {
+        int board[N][N] = {0};
+        board[i][0] = 1;
+        solutions += solve_nqueens_sequential(board, 1);
+    }
+    return solutions;
+}
+
+int main() {
+    int board[N][N] = {0};
+    double start, end;
+
+    // Sequential Execution
+    start = omp_get_wtime();
+    int seq_solutions = solve_nqueens_sequential(board, 0);
+    end = omp_get_wtime();
+    printf("Sequential Solutions: %d\n", seq_solutions);
+    printf("Sequential Time: %f seconds\n", end - start);
+
+    // Parallel Execution
+    start = omp_get_wtime();
+    int par_solutions = solve_nqueens_parallel();
+    end = omp_get_wtime();
+    printf("Parallel Solutions: %d\n", par_solutions);
+    printf("Parallel Time: %f seconds\n", end - start);
+
+    return 0;
+}
+//------------------------
+// 5) Calculate Area of Mandelbrot Set using OpenMP (Race Condition-Free)
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <complex.h>
+
+#define WIDTH 1000
+#define HEIGHT 1000
+#define MAX_ITER 1000
+#define X_MIN -2.0
+#define X_MAX 1.0
+#define Y_MIN -1.5
+#define Y_MAX 1.5
+
+// Function to check if a point belongs to the Mandelbrot set
+int mandelbrot(double real, double imag) {
+    double complex c = real + imag * I;
+    double complex z = 0;
+    int iter = 0;
+
+    while (cabs(z) <= 2.0 && iter < MAX_ITER) {
+        z = z * z + c;
+        iter++;
+    }
+
+    return iter == MAX_ITER;
+}
+
+// Sequential Mandelbrot Area Calculation
+double mandelbrot_area_sequential() {
+    int count = 0;
+    double dx = (X_MAX - X_MIN) / WIDTH;
+    double dy = (Y_MAX - Y_MIN) / HEIGHT;
+
+    for (int i = 0; i < WIDTH; i++) {
+        for (int j = 0; j < HEIGHT; j++) {
+            double x = X_MIN + i * dx;
+            double y = Y_MIN + j * dy;
+            if (mandelbrot(x, y)) count++;
+        }
+    }
+
+    return (double)count / (WIDTH * HEIGHT) * (X_MAX - X_MIN) * (Y_MAX - Y_MIN);
+}
+
+// Parallel Mandelbrot Area Calculation using OpenMP
+double mandelbrot_area_parallel() {
+    int count = 0;
+    double dx = (X_MAX - X_MIN) / WIDTH;
+    double dy = (Y_MAX - Y_MIN) / HEIGHT;
+
+    #pragma omp parallel for reduction(+:count) collapse(2)
+    for (int i = 0; i < WIDTH; i++) {
+        for (int j = 0; j < HEIGHT; j++) {
+            double x = X_MIN + i * dx;
+            double y = Y_MIN + j * dy;
+            if (mandelbrot(x, y)) count++;
+        }
+    }
+
+    return (double)count / (WIDTH * HEIGHT) * (X_MAX - X_MIN) * (Y_MAX - Y_MIN);
+}
+
+int main() {
+    double start, end;
+
+    // Sequential Execution
+    start = omp_get_wtime();
+    double area_seq = mandelbrot_area_sequential();
+    end = omp_get_wtime();
+    printf("Sequential Mandelbrot Area: %lf\n", area_seq);
+    printf("Sequential Time: %f seconds\n", end - start);
+
+    // Parallel Execution
+    start = omp_get_wtime();
+    double area_par = mandelbrot_area_parallel();
+    end = omp_get_wtime();
+    printf("Parallel Mandelbrot Area: %lf\n", area_par);
+    printf("Parallel Time: %f seconds\n", end - start);
+
+    return 0;
+}
+//-------------------------------
+
