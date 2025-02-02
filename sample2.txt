@@ -1,0 +1,93 @@
+// 1) Word Count in a Large Text File
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <omp.h>
+
+int word_count(FILE *file) {
+    int count = 0;
+    char ch, prev = ' ';
+    while ((ch = fgetc(file)) != EOF) {
+        if (isspace(ch) && !isspace(prev)) {
+            count++;
+        }
+        prev = ch;
+    }
+    return count;
+}
+
+// 2) Solving a Triangular System (Lower Triangular Matrix)
+void solve_lower_triangular(int n, double L[n][n], double b[n], double x[n]) {
+    #pragma omp parallel for
+    for (int i = 0; i < n; i++) {
+        double sum = 0;
+        for (int j = 0; j < i; j++) {
+            sum += L[i][j] * x[j];
+        }
+        x[i] = (b[i] - sum) / L[i][i];
+    }
+}
+
+// 3) Factorial Calculation Using OpenMP Tasks
+unsigned long long factorial(int n) {
+    if (n <= 1) return 1;
+    unsigned long long res1, res2;
+
+    #pragma omp task shared(res1)
+    res1 = factorial(n / 2);
+
+    #pragma omp task shared(res2)
+    res2 = factorial(n - n / 2);
+
+    #pragma omp taskwait
+    return res1 * res2;
+}
+
+// 4) Dot Product of Two Vectors
+void dot_product(int *A, int *B, int n) {
+    int result = 0;
+
+    #pragma omp parallel for reduction(+:result)
+    for (int i = 0; i < n; i++) {
+        result += A[i] * B[i];
+    }
+
+    printf("Dot Product: %d\n", result);
+}
+
+int main() {
+    // Word Count
+    FILE *file = fopen("large_text.txt", "r");
+    if (file) {
+        int count = word_count(file);
+        printf("Word Count: %d\n", count);
+        fclose(file);
+    }
+
+    // Solving Triangular System
+    int n = 3;
+    double L[3][3] = {{2, 0, 0}, {3, 1, 0}, {1, -1, 1}};
+    double b[3] = {4, 5, 6};
+    double x[3];
+    solve_lower_triangular(n, L, b, x);
+    printf("Solution of Triangular System: ");
+    for (int i = 0; i < n; i++) printf("%lf ", x[i]);
+    printf("\n");
+
+    // Factorial Calculation
+    int num = 5;
+    unsigned long long fact;
+    #pragma omp parallel
+    {
+        #pragma omp single
+        fact = factorial(num);
+    }
+    printf("Factorial of %d: %llu\n", num, fact);
+
+    // Dot Product
+    int A[5] = {1, 2, 3, 4, 5};
+    int B[5] = {5, 4, 3, 2, 1};
+    dot_product(A, B, 5);
+
+    return 0;
+}
