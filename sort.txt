@@ -410,3 +410,162 @@ int main() {
 
     return 0;
 }
+
+//--------------------------------------
+// Parallel Heap Sort and Insertion Sort using OpenMP
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <time.h>
+
+#define SIZE 100000
+
+// ---------- Heap Sort ---------- //
+
+void heapify(int arr[], int n, int i) {
+    int largest = i;
+    int left = 2 * i + 1;
+    int right = 2 * i + 2;
+
+    if (left < n && arr[left] > arr[largest])
+        largest = left;
+    if (right < n && arr[right] > arr[largest])
+        largest = right;
+
+    if (largest != i) {
+        int temp = arr[i];
+        arr[i] = arr[largest];
+        arr[largest] = temp;
+        heapify(arr, n, largest);
+    }
+}
+
+// Sequential Heap Sort
+void heap_sort_sequential(int arr[], int n) {
+    for (int i = n / 2 - 1; i >= 0; i--)
+        heapify(arr, n, i);
+
+    for (int i = n - 1; i > 0; i--) {
+        int temp = arr[0];
+        arr[0] = arr[i];
+        arr[i] = temp;
+        heapify(arr, i, 0);
+    }
+}
+
+// Parallel Heap Sort
+void heap_sort_parallel(int arr[], int n) {
+    #pragma omp parallel for
+    for (int i = n / 2 - 1; i >= 0; i--)
+        heapify(arr, n, i);
+
+    for (int i = n - 1; i > 0; i--) {
+        int temp = arr[0];
+        arr[0] = arr[i];
+        arr[i] = temp;
+        heapify(arr, i, 0);
+    }
+}
+
+// ---------- Insertion Sort ---------- //
+
+// Sequential Insertion Sort
+void insertion_sort_sequential(int arr[], int n) {
+    for (int i = 1; i < n; i++) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+}
+
+// Parallel Insertion Sort with Merging
+void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    int L[n1], R[n2];
+    for (int i = 0; i < n1; i++) L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++) R[j] = arr[m + 1 + j];
+
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) arr[k++] = L[i++];
+        else arr[k++] = R[j++];
+    }
+
+    while (i < n1) arr[k++] = L[i++];
+    while (j < n2) arr[k++] = R[j++];
+}
+
+void insertion_sort_parallel(int arr[], int n) {
+    int num_threads = 4;
+    int chunk_size = n / num_threads;
+
+    #pragma omp parallel for
+    for (int i = 0; i < num_threads; i++) {
+        int start = i * chunk_size;
+        int end = (i == num_threads - 1) ? n : start + chunk_size;
+        insertion_sort_sequential(arr + start, end - start);
+    }
+
+    // Merging sorted chunks
+    for (int size = chunk_size; size < n; size *= 2) {
+        for (int left = 0; left < n - size; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = (left + 2 * size - 1 < n) ? (left + 2 * size - 1) : (n - 1);
+            merge(arr, left, mid, right);
+        }
+    }
+}
+
+// ---------- Main Function ---------- //
+
+int main() {
+    int *arr_seq_heap = (int *)malloc(SIZE * sizeof(int));
+    int *arr_par_heap = (int *)malloc(SIZE * sizeof(int));
+    int *arr_seq_insert = (int *)malloc(SIZE * sizeof(int));
+    int *arr_par_insert = (int *)malloc(SIZE * sizeof(int));
+
+    srand(time(NULL));
+    for (int i = 0; i < SIZE; i++) {
+        int value = rand() % 100000;
+        arr_seq_heap[i] = arr_par_heap[i] = arr_seq_insert[i] = arr_par_insert[i] = value;
+    }
+
+    double start, end;
+
+    // Sequential Heap Sort
+    start = omp_get_wtime();
+    heap_sort_sequential(arr_seq_heap, SIZE);
+    end = omp_get_wtime();
+    printf("Sequential Heap Sort Time: %f seconds\n", end - start);
+
+    // Parallel Heap Sort
+    start = omp_get_wtime();
+    heap_sort_parallel(arr_par_heap, SIZE);
+    end = omp_get_wtime();
+    printf("Parallel Heap Sort Time: %f seconds\n", end - start);
+
+    // Sequential Insertion Sort
+    start = omp_get_wtime();
+    insertion_sort_sequential(arr_seq_insert, SIZE);
+    end = omp_get_wtime();
+    printf("Sequential Insertion Sort Time: %f seconds\n", end - start);
+
+    // Parallel Insertion Sort
+    start = omp_get_wtime();
+    insertion_sort_parallel(arr_par_insert, SIZE);
+    end = omp_get_wtime();
+    printf("Parallel Insertion Sort Time: %f seconds\n", end - start);
+
+    free(arr_seq_heap);
+    free(arr_par_heap);
+    free(arr_seq_insert);
+    free(arr_par_insert);
+
+    return 0;
+}
