@@ -1,0 +1,236 @@
+// Matrix Multiplication
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 1000 
+ 
+void matrix_multiply(int A[N][N], int B[N][N], int C[N][N]) { 
+    #pragma omp parallel for 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            C[i][j] = 0; 
+            for (int k = 0; k < N; k++) { 
+                C[i][j] += A[i][k] * B[k][j]; 
+            } 
+        } 
+    } 
+} 
+ 
+int main() { 
+    int A[N][N], B[N][N], C[N][N]; 
+     
+    // Initialize matrices A and B 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            A[i][j] = rand() % 100; 
+            B[i][j] = rand() % 100; 
+        } 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+    matrix_multiply(A, B, C); 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0; 
+} 
+
+// Parallel Reduction for Maximum Value
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 1000000 
+ 
+int main() { 
+    int arr[N]; 
+    int max_val = -1; 
+ 
+    // Initialize array with random values 
+    for (int i = 0; i < N; i++) { 
+        arr[i] = rand() % 1000000; 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+ 
+    #pragma omp parallel for reduction(max:max_val) 
+    for (int i = 0; i < N; i++) { 
+        if (arr[i] > max_val) { 
+            max_val = arr[i]; 
+        } 
+    } 
+ 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Maximum value: %d\n", max_val); 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0; 
+} 
+
+//Parallel Prefix Sum
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 1000000 
+ 
+void prefix_sum(int arr[N], int prefix[N]) { 
+    prefix[0] = arr[0]; 
+ 
+    #pragma omp parallel for 
+    for (int i = 1; i < N; i++) { 
+        prefix[i] = prefix[i - 1] + arr[i]; 
+    } 
+} 
+ 
+int main() { 
+    int arr[N], prefix[N]; 
+ 
+    // Initialize array with random values 
+    for (int i = 0; i < N; i++) { 
+        arr[i] = rand() % 10; 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+    prefix_sum(arr, prefix); 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0;
+}
+
+// Parallel Breadth-First Search (BFS)
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 1000 
+ 
+int graph[N][N]; 
+int visited[N]; 
+ 
+void bfs(int start) { 
+    int queue[N]; 
+    int front = 0, rear = 0; 
+ 
+    queue[rear++] = start; 
+    visited[start] = 1; 
+ 
+    while (front < rear) { 
+        int node = queue[front++]; 
+ 
+        #pragma omp parallel for 
+        for (int i = 0; i < N; i++) { 
+            if (graph[node][i] && !visited[i]) { 
+                #pragma omp critical 
+                { 
+                    queue[rear++] = i; 
+                    visited[i] = 1; 
+                } 
+            } 
+        } 
+    } 
+} 
+ 
+int main() { 
+    // Initialize graph with random edges 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            graph[i][j] = rand() % 2; 
+        } 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+    bfs(0); 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0;
+}
+
+// Parallel Floyd Warshall Algorithm
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 1000 
+#define INF 99999 
+ 
+void floydWarshall(int dist[N][N]) { 
+    #pragma omp parallel for 
+    for (int k = 0; k < N; k++) { 
+        for (int i = 0; i < N; i++) { 
+            for (int j = 0; j < N; j++) { 
+                if (dist[i][k] + dist[k][j] < dist[i][j]) {
+                    dist[i][j] = dist[i][k] + dist[k][j]; 
+                } 
+            } 
+        } 
+    } 
+} 
+ 
+int main() { 
+    int dist[N][N]; 
+ 
+    // Initialize distance matrix with random values 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            if (i == j) { 
+                dist[i][j] = 0; 
+            } else { 
+                dist[i][j] = rand() % 100; 
+                if (dist[i][j] == 0) { 
+                    dist[i][j] = INF; 
+                } 
+            } 
+        } 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+    floydWarshall(dist); 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0; 
+} 
+
+// Parallel Matrix Transposition
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 1000 
+ 
+void transpose(int A[N][N], int B[N][N]) { 
+    #pragma omp parallel for 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            B[j][i] = A[i][j]; 
+        } 
+    } 
+} 
+ 
+int main() { 
+    int A[N][N], B[N][N]; 
+ 
+    // Initialize matrix A with random values 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            A[i][j] = rand() % 100; 
+        } 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+    transpose(A, B); 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0; 
+} 
