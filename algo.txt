@@ -341,3 +341,88 @@ int main() {
 
     return 0;
 }
+
+-------------------
+// gamma encoding
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <time.h>
+#include <string.h>
+
+#define ITERATION_COUNT 1000
+#define FIRST_SYMBOL 'A'
+#define SYMBOL_NUMBER 26
+
+void gammaEncodingSequential(char* input, char* gamma, char* result)
+{
+    int j = 0;
+    int Ti, Gi;
+    char BUFF;
+    int input_length = strlen(input);
+    int gamma_length = strlen(gamma);
+
+    for (int i = 0; i < ITERATION_COUNT; i++)
+    {
+        if (j == gamma_length - 1)
+            j = 0;
+
+        Ti = input[i % input_length] - FIRST_SYMBOL;
+        Gi = gamma[j] - FIRST_SYMBOL;
+
+        BUFF = FIRST_SYMBOL + (Ti + Gi) % SYMBOL_NUMBER;
+        result[i] = BUFF;
+        j++;
+    }
+    result[ITERATION_COUNT] = '\0';
+}
+
+void gammaEncodingParallel(char* input, char* gamma, char* result)
+{
+    int Ti, Gi;
+    char BUFF;
+    int input_length = strlen(input);
+    int gamma_length = strlen(gamma);
+
+    #pragma omp parallel for private(Ti, Gi, BUFF)
+    for (int i = 0; i < ITERATION_COUNT; i++)
+    {
+        int j = i % gamma_length;  // Ensure j cycles correctly in parallel
+
+        Ti = input[i % input_length] - FIRST_SYMBOL;
+        Gi = gamma[j] - FIRST_SYMBOL;
+
+        BUFF = FIRST_SYMBOL + (Ti + Gi) % SYMBOL_NUMBER;
+
+        result[i] = BUFF;
+    }
+    result[ITERATION_COUNT] = '\0';
+}
+
+int main() {
+    char input[] = "HELLO";
+    char gamma[] = "KEY";
+    char result_seq[ITERATION_COUNT + 1];
+    char result_par[ITERATION_COUNT + 1];
+
+    clock_t start, end;
+
+    // Sequential execution
+    start = clock();
+    gammaEncodingSequential(input, gamma, result_seq);
+    end = clock();
+    double time_seq = (double)(end - start) / CLOCKS_PER_SEC;
+
+    // Parallel execution
+    start = clock();
+    gammaEncodingParallel(input, gamma, result_par);
+    end = clock();
+    double time_par = (double)(end - start) / CLOCKS_PER_SEC;
+
+    printf("Sequential Encoded Result: %s\n", result_seq);
+    printf("Parallel Encoded Result:   %s\n", result_par);
+    printf("\nTime taken (Sequential): %lf seconds\n", time_seq);
+    printf("Time taken (Parallel):   %lf seconds\n", time_par);
+
+    return 0;
+}
