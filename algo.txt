@@ -1,0 +1,343 @@
+//Bankers algorithm
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define P 5 // Number of processes
+#define R 3 // Number of resources
+
+int available[R] = {3, 3, 2};
+int max[P][R] = {{7, 5, 3}, {3, 2, 2}, {9, 0, 2}, {2, 2, 2}, {4, 3, 3}};
+int allocation[P][R] = {{0, 1, 0}, {2, 0, 0}, {3, 0, 2}, {2, 1, 1}, {0, 0, 2}};
+int need[P][R];
+
+// Function to calculate the Need matrix
+void calculate_need() {
+    for (int i = 0; i < P; i++) {
+        for (int j = 0; j < R; j++) {
+            need[i][j] = max[i][j] - allocation[i][j];
+        }
+    }
+}
+
+// Sequential Banker's Algorithm
+void bankers_sequential() {
+    int finish[P] = {0};
+    int work[R];
+    for (int i = 0; i < R; i++) work[i] = available[i];
+
+    printf("\nSequential Safe Sequence: ");
+    for (int count = 0; count < P; count++) {
+        for (int i = 0; i < P; i++) {
+            if (!finish[i]) {
+                int flag = 1;
+                for (int j = 0; j < R; j++) {
+                    if (need[i][j] > work[j]) {
+                        flag = 0;
+                        break;
+                    }
+                }
+                if (flag) {
+                    for (int k = 0; k < R; k++) work[k] += allocation[i][k];
+                    finish[i] = 1;
+                    printf("P%d ", i);
+                    break;
+                }
+            }
+        }
+    }
+    printf("\n");
+}
+
+// Parallel Banker's Algorithm using OpenMP
+void bankers_parallel() {
+    int finish[P] = {0};
+    int work[R];
+    for (int i = 0; i < R; i++) work[i] = available[i];
+
+    printf("\nParallel Safe Sequence: ");
+    for (int count = 0; count < P; count++) {
+        #pragma omp parallel for
+        for (int i = 0; i < P; i++) {
+            if (!finish[i]) {
+                int flag = 1;
+                for (int j = 0; j < R; j++) {
+                    if (need[i][j] > work[j]) {
+                        flag = 0;
+                        break;
+                    }
+                }
+                if (flag) {
+                    #pragma omp critical
+                    {
+                        for (int k = 0; k < R; k++) work[k] += allocation[i][k];
+                        finish[i] = 1;
+                        printf("P%d ", i);
+                    }
+                }
+            }
+        }
+    }
+    printf("\n");
+}
+
+int main() {
+    calculate_need();
+
+    printf("Banker's Algorithm for Deadlock Avoidance\n");
+    bankers_sequential();
+    bankers_parallel();
+
+    return 0;
+}
+-----------------------------------------------------------
+
+//concurrency problems
+// 1) Dining Philosophers Problem
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <unistd.h>
+#include <time.h>
+
+#define N 5
+
+omp_lock_t forks[N];
+
+void dining_philosophers_sequential() {
+    for (int id = 0; id < N; id++) {
+        printf("Philosopher %d is thinking.\n", id);
+        sleep(1);
+
+        printf("Philosopher %d is eating.\n", id);
+        sleep(1);
+    }
+}
+
+void dining_philosophers_parallel() {
+    #pragma omp parallel num_threads(N)
+    {
+        int id = omp_get_thread_num();
+        int left = id;
+        int right = (id + 1) % N;
+
+        printf("Philosopher %d is thinking.\n", id);
+        sleep(1);
+
+        omp_set_lock(&forks[left]);
+        omp_set_lock(&forks[right]);
+
+        printf("Philosopher %d is eating.\n", id);
+        sleep(1);
+
+        omp_unset_lock(&forks[left]);
+        omp_unset_lock(&forks[right]);
+    }
+}
+
+// 2) Producer-Consumer Model
+#define BUFFER_SIZE 5
+int buffer[BUFFER_SIZE], count = 0;
+omp_lock_t buffer_lock;
+
+void producer_consumer_sequential() {
+    for (int i = 0; i < 10; i++) {
+        if (count < BUFFER_SIZE) {
+            buffer[count++] = i;
+            printf("Produced: %d\n", i);
+        }
+        sleep(1);
+
+        if (count > 0) {
+            printf("Consumed: %d\n", buffer[--count]);
+        }
+        sleep(2);
+    }
+}
+
+void producer_consumer_parallel() {
+    #pragma omp parallel sections
+    {
+        #pragma omp section
+        {
+            for (int i = 0; i < 10; i++) {
+                omp_set_lock(&buffer_lock);
+                if (count < BUFFER_SIZE) {
+                    buffer[count++] = i;
+                    printf("Produced: %d\n", i);
+                }
+                omp_unset_lock(&buffer_lock);
+                sleep(1);
+            }
+        }
+
+        #pragma omp section
+        {
+            for (int i = 0; i < 10; i++) {
+                omp_set_lock(&buffer_lock);
+                if (count > 0) {
+                    printf("Consumed: %d\n", buffer[--count]);
+                }
+                omp_unset_lock(&buffer_lock);
+                sleep(2);
+            }
+        }
+    }
+}
+
+// 3) Readers-Writers Problem
+int read_count = 0;
+omp_lock_t read_lock, write_lock;
+
+void readers_writers_sequential() {
+    for (int i = 0; i < 5; i++) {
+        printf("Reader %d is reading.\n", i);
+        sleep(1);
+
+        printf("Writer %d is writing.\n", i);
+        sleep(2);
+    }
+}
+
+void readers_writers_parallel() {
+    #pragma omp parallel sections
+    {
+        #pragma omp section
+        {
+            for (int i = 0; i < 5; i++) {
+                omp_set_lock(&read_lock);
+                read_count++;
+                if (read_count == 1) omp_set_lock(&write_lock);
+                omp_unset_lock(&read_lock);
+
+                printf("Reader %d is reading.\n", i);
+                sleep(1);
+
+                omp_set_lock(&read_lock);
+                read_count--;
+                if (read_count == 0) omp_unset_lock(&write_lock);
+                omp_unset_lock(&read_lock);
+                sleep(1);
+            }
+        }
+
+        #pragma omp section
+        {
+            for (int i = 0; i < 5; i++) {
+                omp_set_lock(&write_lock);
+                printf("Writer %d is writing.\n", i);
+                sleep(2);
+                omp_unset_lock(&write_lock);
+                sleep(1);
+            }
+        }
+    }
+}
+
+// 4) Sleeping Barber Problem
+#define CHAIRS 3
+int waiting_customers = 0;
+omp_lock_t barber_lock, customer_lock;
+
+void sleeping_barber_sequential() {
+    for (int i = 0; i < 10; i++) {
+        printf("Customer %d is waiting.\n", i);
+        sleep(1);
+
+        printf("Barber is cutting hair.\n");
+        sleep(2);
+    }
+}
+
+void sleeping_barber_parallel() {
+    #pragma omp parallel sections
+    {
+        #pragma omp section
+        {
+            while (1) {
+                omp_set_lock(&barber_lock);
+                if (waiting_customers > 0) {
+                    waiting_customers--;
+                    printf("Barber is cutting hair.\n");
+                    sleep(2);
+                } else {
+                    printf("Barber is sleeping.\n");
+                }
+                omp_unset_lock(&barber_lock);
+                sleep(1);
+            }
+        }
+
+        #pragma omp section
+        {
+            for (int i = 0; i < 10; i++) {
+                omp_set_lock(&customer_lock);
+                if (waiting_customers < CHAIRS) {
+                    waiting_customers++;
+                    printf("Customer %d is waiting.\n", i);
+                } else {
+                    printf("Customer %d left because of no chair.\n", i);
+                }
+                omp_unset_lock(&customer_lock);
+                sleep(1);
+            }
+        }
+    }
+}
+
+int main() {
+    for (int i = 0; i < N; i++) omp_init_lock(&forks[i]);
+    omp_init_lock(&buffer_lock);
+    omp_init_lock(&read_lock);
+    omp_init_lock(&write_lock);
+    omp_init_lock(&barber_lock);
+    omp_init_lock(&customer_lock);
+
+    clock_t start, end;
+
+    printf("1) Dining Philosophers Problem:\n");
+    start = clock();
+    dining_philosophers_sequential();
+    end = clock();
+    printf("Sequential Time: %lf seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    start = clock();
+    dining_philosophers_parallel();
+    end = clock();
+    printf("Parallel Time: %lf seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    printf("\n2) Producer-Consumer Model:\n");
+    start = clock();
+    producer_consumer_sequential();
+    end = clock();
+    printf("Sequential Time: %lf seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    start = clock();
+    producer_consumer_parallel();
+    end = clock();
+    printf("Parallel Time: %lf seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    printf("\n3) Readers-Writers Problem:\n");
+    start = clock();
+    readers_writers_sequential();
+    end = clock();
+    printf("Sequential Time: %lf seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    start = clock();
+    readers_writers_parallel();
+    end = clock();
+    printf("Parallel Time: %lf seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    printf("\n4) Sleeping Barber Problem:\n");
+    start = clock();
+    sleeping_barber_sequential();
+    end = clock();
+    printf("Sequential Time: %lf seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    start = clock();
+    sleeping_barber_parallel();
+    end = clock();
+    printf("Parallel Time: %lf seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    return 0;
+}
