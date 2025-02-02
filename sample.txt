@@ -1,0 +1,116 @@
+// sum of natural numbers (for)
+#include <stdio.h>
+#include <omp.h>
+int main() {
+    int n, sum = 0;
+    double start = omp_get_wtime();
+    // Input for the number of natural numbers
+    printf("Enter the value of n: ");
+    scanf("%d", &n);
+    // Parallel for loop with critical section
+    #pragma omp parallel for
+    for (int i = 1; i <= n; i++) {
+        #pragma omp critical
+        {
+            sum += i;
+        }
+    }
+    // Display the result
+    printf("Sum of first %d natural numbers is: %d\n", n, sum);
+    double end = omp_get_wtime();
+    printf(" %.6f ", end-start);
+    return 0;
+}
+//-------------------------
+// sum of natural numbers (reduction)
+#include <stdio.h>
+#include <omp.h>
+int main() {
+    int n, sum = 0;
+    // Input for the number of natural numbers
+    printf("Enter the value of n: ");
+    scanf("%d", &n);
+    // Parallel for loop with reduction clause
+    #pragma omp parallel for reduction(+:sum)
+    for (int i = 1; i <= n; i++) {
+        sum += i;
+    }
+    // Display the result
+    printf("Sum of first %d natural numbers is: %d\n", n, sum);
+    return 0;
+}
+//-------------------------
+// Loop-carried dependence using OpenMP
+#include <stdio.h>
+#include <omp.h>
+#define N 10
+int main() {
+    int A[N], B[N], C[N];
+    // Initialize arrays A and B
+    for (int i = 0; i < N; i++) {
+        A[i] = i + 1;
+        B[i] = (i + 1) * 2;
+    }
+    // Handling loop-carried dependence
+    C[0] = A[0] + B[0]; // First element is initialized separately
+    #pragma omp parallel
+    {
+        #pragma omp single
+        {
+            for (int i = 1; i < N; i++) {
+                #pragma omp task depend(in:C[i-1]) depend(out:C[i])
+                {
+                    C[i] = A[i] + B[i] + C[i-1];
+                }
+            }
+        }
+    }
+    // Display the result
+    printf("Array C:\n");
+    for (int i = 0; i < N; i++) {
+        printf("%d ", C[i]);
+    }
+    printf("\n");
+    return 0;
+}
+
+//--------------------------
+// Race Condition
+#include <stdio.h>
+#include <omp.h>
+int main() {
+    int counter = 0;
+    // Parallel region without synchronization to create a data race
+    #pragma omp parallel for
+    for (int i = 0; i < 100000; i++) {
+        counter++;  // This causes a data race
+    }
+    // Display the (incorrect) result
+    printf("Final value of counter (with data race): %d\n", counter);
+    return 0;
+}
+
+//-------------------------------
+// Shared Private data
+#include <stdio.h>
+#include <omp.h>
+int main() {
+    int sharedVar = 0; // Shared variable among all threads
+    // Parallel region
+    #pragma omp parallel shared(sharedVar)
+    {
+        int privateVar = 0; // Private variable for each thread
+        // Each thread sets its privateVar to its thread ID
+        privateVar = omp_get_thread_num();
+        // Critical section to safely update the shared variable
+        #pragma omp critical
+        {
+            sharedVar += privateVar;
+        }
+        // Display private variable for each thread
+        printf("Thread %d: privateVar = %d\n", privateVar, privateVar);
+    }
+    // Display final value of sharedVar
+    printf("Final value of sharedVar (sum of thread IDs): %d\n", sharedVar);
+    return 0;
+}
