@@ -190,3 +190,223 @@ int main() {
 
     return 0;
 }
+//------------------------------------
+// Odd-Even Transposition Sort using OpenMP vs Sequential Bubble Sort
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <time.h>
+
+#define SIZE 100000
+
+// Sequential Bubble Sort
+void bubble_sort_sequential(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                int temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}
+
+// Parallel Odd-Even Transposition Sort using OpenMP
+void odd_even_sort_parallel(int arr[], int n) {
+    int is_sorted = 0;
+
+    while (!is_sorted) {
+        is_sorted = 1;
+
+        // Odd phase
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = 1; i < n - 1; i += 2) {
+            if (arr[i] > arr[i + 1]) {
+                int temp = arr[i];
+                arr[i] = arr[i + 1];
+                arr[i + 1] = temp;
+                is_sorted = 0;
+            }
+        }
+
+        // Even phase
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < n - 1; i += 2) {
+            if (arr[i] > arr[i + 1]) {
+                int temp = arr[i];
+                arr[i] = arr[i + 1];
+                arr[i + 1] = temp;
+                is_sorted = 0;
+            }
+        }
+    }
+}
+
+int main() {
+    int *arr_seq = (int *)malloc(SIZE * sizeof(int));
+    int *arr_par = (int *)malloc(SIZE * sizeof(int));
+
+    // Initialize the arrays with random values
+    srand(time(NULL));
+    for (int i = 0; i < SIZE; i++) {
+        int value = rand() % 100000;
+        arr_seq[i] = value;
+        arr_par[i] = value;
+    }
+
+    double start, end;
+
+    // Sequential Bubble Sort
+    start = omp_get_wtime();
+    bubble_sort_sequential(arr_seq, SIZE);
+    end = omp_get_wtime();
+    printf("Sequential Bubble Sort Time: %f seconds\n", end - start);
+
+    // Parallel Odd-Even Transposition Sort
+    start = omp_get_wtime();
+    odd_even_sort_parallel(arr_par, SIZE);
+    end = omp_get_wtime();
+    printf("Parallel Odd-Even Sort Time: %f seconds\n", end - start);
+
+    // Verify correctness
+    int correct = 1;
+    for (int i = 0; i < SIZE; i++) {
+        if (arr_seq[i] != arr_par[i]) {
+            correct = 0;
+            break;
+        }
+    }
+
+    printf("Sorting Correct: %s\n", correct ? "Yes" : "No");
+
+    free(arr_seq);
+    free(arr_par);
+
+    return 0;
+}
+
+//----------------------------------------------
+// Radix Sort with OpenMP (Parallelized Counting Sort)
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <time.h>
+
+#define SIZE 100000
+#define MAX_DIGIT 10 // For base 10 numbers
+
+// Get the maximum value in the array
+int getMax(int arr[], int n) {
+    int max = arr[0];
+    for (int i = 1; i < n; i++) {
+        if (arr[i] > max)
+            max = arr[i];
+    }
+    return max;
+}
+
+// Sequential Counting Sort (for Radix Sort)
+void countingSort_sequential(int arr[], int n, int exp) {
+    int output[n];
+    int count[MAX_DIG] = {0};
+
+    for (int i = 0; i < n; i++)
+        count[(arr[i] / exp) % 10]++;
+
+    for (int i = 1; i < MAX_DIG; i++)
+        count[i] += count[i - 1];
+
+    for (int i = n - 1; i >= 0; i--) {
+        output[count[(arr[i] / exp) % 10] - 1] = arr[i];
+        count[(arr[i] / exp) % 10]--;
+    }
+
+    for (int i = 0; i < n; i++)
+        arr[i] = output[i];
+}
+
+// Parallel Counting Sort using OpenMP
+void countingSort_parallel(int arr[], int n, int exp) {
+    int output[n];
+    int count[MAX_DIG] = {0};
+
+    // Parallelize counting phase
+    #pragma omp parallel for reduction(+:count[:MAX_DIG])
+    for (int i = 0; i < n; i++) {
+        count[(arr[i] / exp) % 10]++;
+    }
+
+    for (int i = 1; i < MAX_DIG; i++)
+        count[i] += count[i - 1];
+
+    // Parallelize output construction
+    #pragma omp parallel for
+    for (int i = n - 1; i >= 0; i--) {
+        int index = (arr[i] / exp) % 10;
+        #pragma omp critical
+        {
+            output[count[index] - 1] = arr[i];
+            count[index]--;
+        }
+    }
+
+    for (int i = 0; i < n; i++)
+        arr[i] = output[i];
+}
+
+// Sequential Radix Sort
+void radixSort_sequential(int arr[], int n) {
+    int max = getMax(arr, n);
+    for (int exp = 1; max / exp > 0; exp *= 10)
+        countingSort_sequential(arr, n, exp);
+}
+
+// Parallel Radix Sort
+void radixSort_parallel(int arr[], int n) {
+    int max = getMax(arr, n);
+    for (int exp = 1; max / exp > 0; exp *= 10)
+        countingSort_parallel(arr, n, exp);
+}
+
+int main() {
+    int *arr_seq = (int *)malloc(SIZE * sizeof(int));
+    int *arr_par = (int *)malloc(SIZE * sizeof(int));
+
+    srand(time(NULL));
+    for (int i = 0; i < SIZE; i++) {
+        int value = rand() % 100000;
+        arr_seq[i] = value;
+        arr_par[i] = value;
+    }
+
+    double start, end;
+
+    // Sequential Radix Sort
+    start = omp_get_wtime();
+    radixSort_sequential(arr_seq, SIZE);
+    end = omp_get_wtime();
+    printf("Sequential Radix Sort Time: %f seconds\n", end - start);
+
+    // Parallel Radix Sort
+    start = omp_get_wtime();
+    radixSort_parallel(arr_par, SIZE);
+    end = omp_get_wtime();
+    printf("Parallel Radix Sort Time: %f seconds\n", end - start);
+
+    // Verify correctness
+    int correct = 1;
+    for (int i = 0; i < SIZE; i++) {
+        if (arr_seq[i] != arr_par[i]) {
+            correct = 0;
+            break;
+        }
+    }
+
+    printf("Sorting Correct: %s\n", correct ? "Yes" : "No");
+
+    free(arr_seq);
+    free(arr_par);
+
+    return 0;
+}
