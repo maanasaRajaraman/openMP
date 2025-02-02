@@ -5,6 +5,14 @@ Readers-writers
 Sleeping Barber
 banker's algorithm
 ------------------------------------------------
+algo2.txt
+dij-dij
+lcs
+numerical integration
+n queens
+Mandelbrot
+pseudo random number generator
+------------------------------------------------
 matrix.txt
 Matrix multiplication
 Parallel Matrix Determinant Calculation
