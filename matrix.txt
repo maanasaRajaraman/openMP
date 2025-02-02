@@ -60,3 +60,140 @@ int main() {
 
     return 0;
 }
+
+//Parallel Matrix Determinant Calculation
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 100 
+ 
+int determinant(int mat[N][N], int n) { 
+    int det = 0; 
+    if (n == 1) return mat[0][0]; 
+ 
+    int temp[N][N]; 
+    int sign = 1; 
+ 
+    #pragma omp parallel for reduction(+:det) private(temp, sign) 
+    for (int f = 0; f < n; f++) { 
+        int i = 0, j = 0; 
+        for (int row = 1; row < n; row++) { 
+            for (int col = 0; col < n; col++) { 
+                if (col == f) continue; 
+                temp[i][j++] = mat[row][col]; 
+                if (j == n - 1) { 
+                    j = 0; 
+                    i++; 
+                } 
+            } 
+        } 
+        det += sign * mat[0][f] * determinant(temp, n - 1); 
+        sign = -sign; 
+    } 
+    return det; 
+} 
+ 
+int main() { 
+    int mat[N][N]; 
+ 
+    // Initialize matrix with random values 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            mat[i][j] = rand() % 10; 
+        } 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+    int det = determinant(mat, N); 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Determinant: %d\n", det); 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0; 
+}
+
+// Parallel Convolution of Two Matrices 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 100 
+#define KERNEL_SIZE 3 
+ 
+void convolution(int input[N][N], int kernel[KERNEL_SIZE][KERNEL_SIZE], int output[N][N]) { 
+    int pad = KERNEL_SIZE / 2; 
+ 
+    #pragma omp parallel for 
+    for (int i = pad; i < N - pad; i++) { 
+        for (int j = pad; j < N - pad; j++) { 
+            int sum = 0; 
+            for (int ki = 0; ki < KERNEL_SIZE; ki++) { 
+                for (int kj = 0; kj < KERNEL_SIZE; kj++) { 
+                    sum += input[i - pad + ki][j - pad + kj] * kernel[ki][kj]; 
+                } 
+            } 
+            output[i][j] = sum; 
+        } 
+    } 
+} 
+ 
+int main() { 
+    int input[N][N], kernel[KERNEL_SIZE][KERNEL_SIZE], output[N][N]; 
+ 
+    // Initialize input matrix and kernel 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            input[i][j] = rand() % 10; 
+        } 
+    } 
+    for (int i = 0; i < KERNEL_SIZE; i++) { 
+        for (int j = 0; j < KERNEL_SIZE; j++) { 
+            kernel[i][j] = rand() % 3 - 1; // Random kernel values between -1 and 1 
+        } 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+    convolution(input, kernel, output); 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0; 
+} 
+
+// Parallel Matrix Transposition 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+ 
+#define N 1000 
+ 
+void transpose(int A[N][N], int B[N][N]) { 
+    #pragma omp parallel for 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            B[j][i] = A[i][j]; 
+        } 
+    } 
+} 
+ 
+int main() { 
+    int A[N][N], B[N][N]; 
+ 
+    // Initialize matrix A with random values 
+    for (int i = 0; i < N; i++) { 
+        for (int j = 0; j < N; j++) { 
+            A[i][j] = rand() % 100; 
+        } 
+    } 
+ 
+    double start_time = omp_get_wtime(); 
+    transpose(A, B); 
+    double end_time = omp_get_wtime(); 
+ 
+    printf("Time taken: %f seconds\n", end_time - start_time); 
+ 
+    return 0;
+}
