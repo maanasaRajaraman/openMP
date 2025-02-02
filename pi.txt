@@ -57,3 +57,59 @@ int main(int argc, char **argv)
 
     return 0;
 }
+------------------------
+// Calculate Pi Value Using Monte Carlo Algorithm
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <math.h>
+
+#define NUM_POINTS 100000000
+
+// Sequential Monte Carlo Method to Estimate Pi
+double monte_carlo_pi_sequential() {
+    int count = 0;
+    for (int i = 0; i < NUM_POINTS; i++) {
+        double x = (double)rand() / RAND_MAX;
+        double y = (double)rand() / RAND_MAX;
+        if (x * x + y * y <= 1.0) count++;
+    }
+    return 4.0 * count / NUM_POINTS;
+}
+
+// Parallel Monte Carlo Method to Estimate Pi Using OpenMP
+double monte_carlo_pi_parallel() {
+    int count = 0;
+
+    #pragma omp parallel
+    {
+        unsigned int seed = omp_get_thread_num(); // Ensure different seeds
+        #pragma omp for reduction(+:count)
+        for (int i = 0; i < NUM_POINTS; i++) {
+            double x = (double)rand_r(&seed) / RAND_MAX;
+            double y = (double)rand_r(&seed) / RAND_MAX;
+            if (x * x + y * y <= 1.0) count++;
+        }
+    }
+    return 4.0 * count / NUM_POINTS;
+}
+
+int main() {
+    double start, end;
+
+    // Sequential Execution
+    start = omp_get_wtime();
+    double pi_seq = monte_carlo_pi_sequential();
+    end = omp_get_wtime();
+    printf("Sequential Pi Estimate: %lf\n", pi_seq);
+    printf("Sequential Time: %f seconds\n", end - start);
+
+    // Parallel Execution
+    start = omp_get_wtime();
+    double pi_par = monte_carlo_pi_parallel();
+    end = omp_get_wtime();
+    printf("Parallel Pi Estimate: %lf\n", pi_par);
+    printf("Parallel Time: %f seconds\n", end - start);
+
+    return 0;
+}
