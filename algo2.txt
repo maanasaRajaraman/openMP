@@ -71,6 +71,7 @@ int main() {
 
     return 0;
 }
+-------------------------------------
 // 2) Longest Common Subsequence (LCS)
 #include <stdio.h>
 #include <string.h>
@@ -95,7 +96,7 @@ int lcs_sequential(char* X, char* Y, int m, int n) {
     }
     return dp[m][n];
 }
-//---------------------------------------
+---------------------------------------
 // Parallel LCS using OpenMP
 int lcs_parallel(char* X, char* Y, int m, int n) {
     int dp[MAX][MAX];
@@ -144,7 +145,7 @@ int main() {
 
     return 0;
 }
-//----------------------------
+----------------------------
 //integration
 // 3) Numerical Integration (Trapezoidal Rule)
 #include <stdio.h>
@@ -204,7 +205,7 @@ int main() {
 
     return 0;
 }
-//--------------------------------
+--------------------------------
 // n queens
 // 4) N-Queens Problem (Backtracking)
 #include <stdio.h>
@@ -276,7 +277,7 @@ int main() {
 
     return 0;
 }
-//------------------------
+------------------------
 // 5) Calculate Area of Mandelbrot Set using OpenMP (Race Condition-Free)
 #include <stdio.h>
 #include <stdlib.h>
@@ -359,5 +360,66 @@ int main() {
 
     return 0;
 }
-//-------------------------------
+-------------------------------
+// 7) Linear Congruential Generator (LCG)
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define NUM_RANDOM 100000000
+
+// Parameters for LCG
+#define MODULUS 2147483648 // 2^31
+#define MULTIPLIER 1103515245
+#define INCREMENT 12345
+
+// Sequential Linear Congruential Generator
+void lcg_sequential(unsigned int seed, unsigned int* random_numbers) {
+    random_numbers[0] = seed;
+    for (int i = 1; i < NUM_RANDOM; i++) {
+        random_numbers[i] = (MULTIPLIER * random_numbers[i - 1] + INCREMENT) % MODULUS;
+    }
+}
+
+// Parallel Linear Congruential Generator using OpenMP
+void lcg_parallel(unsigned int seed, unsigned int* random_numbers) {
+    #pragma omp parallel for
+    for (int i = 0; i < NUM_RANDOM; i++) {
+        random_numbers[i] = (MULTIPLIER * (seed + i) + INCREMENT) % MODULUS;
+    }
+}
+
+int main() {
+    unsigned int* random_seq = (unsigned int*)malloc(NUM_RANDOM * sizeof(unsigned int));
+    unsigned int* random_par = (unsigned int*)malloc(NUM_RANDOM * sizeof(unsigned int));
+
+    double start, end;
+    unsigned int seed = 12345;
+
+    // Sequential Execution
+    start = omp_get_wtime();
+    lcg_sequential(seed, random_seq);
+    end = omp_get_wtime();
+    printf("Sequential LCG Time: %f seconds\n", end - start);
+
+    // Parallel Execution
+    start = omp_get_wtime();
+    lcg_parallel(seed, random_par);
+    end = omp_get_wtime();
+    printf("Parallel LCG Time: %f seconds\n", end - start);
+
+    // Verification (compare first 5 values)
+    printf("First 5 Sequential LCG Numbers: ");
+    for (int i = 0; i < 5; i++) printf("%u ", random_seq[i]);
+    printf("\n");
+
+    printf("First 5 Parallel LCG Numbers:   ");
+    for (int i = 0; i < 5; i++) printf("%u ", random_par[i]);
+    printf("\n");
+
+    free(random_seq);
+    free(random_par);
+
+    return 0;
+}
 
