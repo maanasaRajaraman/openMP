@@ -1,0 +1,59 @@
+// Pi value calculation
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define NUM_STEPS 800
+
+int main(int argc, char **argv)
+{
+    int num_steps = NUM_STEPS;
+    int i;
+    double x;
+    double pi;
+    double step = 1.0 / (double)num_steps;
+
+    double sum[num_steps];
+
+    for (i = 0; i < num_steps; i++)
+    {
+        sum[i] = 0;
+    }
+
+    // Sequential calculation
+    double seq_start = omp_get_wtime();
+    double seq_sum = 0.0;
+    for (i = 0; i < num_steps; i++)
+    {
+        x = (i + 0.5) * step;
+        seq_sum += 4.0 / (1.0 + x * x);
+    }
+    double pi_seq = step * seq_sum;
+    double seq_end = omp_get_wtime();
+
+    // Parallel calculation
+    double par_start = omp_get_wtime();
+    omp_set_num_threads(num_steps);
+    #pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+        x = (thread_id + 0.5) * step;
+        sum[thread_id] += 4.0 / (1.0 + x * x);
+    }
+
+    double totalSum = 0;
+    for (i = 0; i < num_steps; i++)
+    {
+        totalSum += sum[i];
+    }
+    pi = step * totalSum;
+    double par_end = omp_get_wtime();
+
+    // Printing the results
+    printf("Sequential Pi: %.5f\n", pi_seq);
+    printf("Parallel Pi:   %.5f\n", pi);
+    printf("Time taken (Sequential): %.6f seconds\n", seq_end - seq_start);
+    printf("Time taken (Parallel):   %.6f seconds\n", par_end - par_start);
+
+    return 0;
+}
