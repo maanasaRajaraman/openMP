@@ -1,0 +1,2 @@
+# openMP
+Programs using openMP
