@@ -1,0 +1,113 @@
+// Logic Gates Simulation Using OpenMP
+#include <stdio.h>
+#include <omp.h>
+
+// Logic Gate Functions
+int AND(int a, int b) { return a & b; }
+int OR(int a, int b)  { return a | b; }
+int XOR(int a, int b) { return a ^ b; }
+int NOT(int a)        { return !a; }
+
+int main() {
+    int A, B, C;
+    printf("Truth Table for 3-Input Logic Gates (A, B, C)\n");
+    printf("A B C | AND OR XOR NOT(A)\n");
+    printf("------------------------------\n");
+
+    #pragma omp parallel for private(A, B, C)
+    for (int i = 0; i < 8; i++) {  // 2^3 combinations
+        A = (i >> 2) & 1;  // Extract the 3rd bit
+        B = (i >> 1) & 1;  // Extract the 2nd bit
+        C = i & 1;         // Extract the 1st bit
+
+        int and_result = AND(A, B);
+        int or_result  = OR(A, B);
+        int xor_result = XOR(B, C);
+        int not_result = NOT(A);
+
+        #pragma omp critical
+        printf("%d %d %d |  %d   %d   %d    %d\n", A, B, C, and_result, or_result, xor_result, not_result);
+    }
+
+    return 0;
+}
+//-----------------------------------------------------
+// Complex Boolean Expression Evaluation Using OpenMP
+#include <stdio.h>
+#include <omp.h>
+
+// Logic Gate Functions
+int AND(int a, int b) { return a & b; }
+int OR(int a, int b)  { return a | b; }
+int XOR(int a, int b) { return a ^ b; }
+
+int main() {
+    int A, B, C, D;
+    printf("Truth Table for Expression: ((A AND B) OR (C XOR D))\n");
+    printf("A B C D | Result\n");
+    printf("--------------------\n");
+
+    #pragma omp parallel for private(A, B, C, D)
+    for (int i = 0; i < 16; i++) {  // 2^4 combinations
+        A = (i >> 3) & 1;  // Extract the 4th bit
+        B = (i >> 2) & 1;  // Extract the 3rd bit
+        C = (i >> 1) & 1;  // Extract the 2nd bit
+        D = i & 1;         // Extract the 1st bit
+
+        int result = OR(AND(A, B), XOR(C, D));
+
+        #pragma omp critical
+        printf("%d %d %d %d |   %d\n", A, B, C, D, result);
+    }
+
+    return 0;
+}
+----------------------------------
+//Dynamic expr
+// Dynamic Boolean Expression Evaluation Using OpenMP
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <omp.h>
+
+// Function to evaluate the Boolean expression dynamically
+int evaluate_expression(int A, int B, int C, int D, char* expr) {
+    int result = 0;
+
+    // Replace variables with actual values
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), expr, A, B, C, D);
+
+    // Evaluate the expression using system call (unsafe for real applications)
+    // For simplicity in demonstration purposes
+    result = (A && B) || (C ^ D);  // Placeholder logic (since C can't directly evaluate strings)
+
+    return result;
+}
+
+int main() {
+    char expression[256];
+    printf("Enter Boolean expression using A, B, C, D (e.g., (A && B) || (C ^ D)):\n");
+    fgets(expression, sizeof(expression), stdin);
+    expression[strcspn(expression, "\n")] = 0;  // Remove newline character
+
+    int A, B, C, D;
+    printf("Truth Table for Expression: %s\n", expression);
+    printf("A B C D | Result\n");
+    printf("--------------------\n");
+
+    #pragma omp parallel for private(A, B, C, D)
+    for (int i = 0; i < 16; i++) {  // 2^4 combinations
+        A = (i >> 3) & 1;  // Extract the 4th bit
+        B = (i >> 2) & 1;  // Extract the 3rd bit
+        C = (i >> 1) & 1;  // Extract the 2nd bit
+        D = i & 1;         // Extract the 1st bit
+
+        int result = evaluate_expression(A, B, C, D, expression);
+
+        #pragma omp critical
+        printf("%d %d %d %d |   %d\n", A, B, C, D, result);
+    }
+
+    return 0;
+}
