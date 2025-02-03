@@ -12,6 +12,7 @@ n queens
 Mandelbrot
 pseudo random number generator
 m colouring
+dfs
 ------------------------------------------------
 matrix.txt
 Matrix multiplication
