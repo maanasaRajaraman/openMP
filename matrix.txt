@@ -1,3 +1,81 @@
+//Quadrant sum
+
+#include<stdio.h>
+#include<omp.h>
+
+void main()
+{
+        int N, i, j;
+        printf("Enter size of matrix:");
+        scanf("%d", &N);
+        int matrix[N][N];
+        printf("Enter matrix elements: \n");
+        for(i = 0; i < N; i++)
+        {
+                for(j = 0; j < N; j++)
+                {
+                        scanf("%d", &matrix[i][j]);
+                }
+        }
+        printf("Input matrix: \n");
+        for(i = 0; i < N; i++)
+        {
+                for(j = 0; j < N; j++)
+                {
+                        printf("%d", matrix[i][j]);
+                }
+        printf("\n");
+        }
+        int sumA = 0, sumB = 0, sumC = 0, sumD = 0;
+        #pragma omp parallel sections reduction(+:sumA, sumB, sumC, sumD)
+        {
+                #pragma omp section
+                {
+                        for(i=0; i<N/2; i++)
+                        {
+                                for(j=0; j<N/2; j++)
+                                {
+                                        sumA+=matrix[i][j];
+                                }
+                        }
+                }
+                #pragma omp section
+                {
+                        for(i=0; i<N/2; i++)
+                        {
+                                for(j=N/2; j<N; j++)
+                                {
+                                        sumB+=matrix[i][j];
+                                }
+                        }
+                }
+                #pragma omp section
+                {
+                        for(i=N/2; i<N; i++)
+                        {
+                                for(j=0; j<N/2; j++)
+                                {
+                                        sumC+=matrix[i][j];
+                                }
+                        }
+                }
+                #pragma omp section
+                {
+                        for(i=N/2; i<N; i++)
+                        {
+                                for(j=N/2; j<N; j++)
+                                {
+                                        sumD+=matrix[i][j];
+                                }
+                        }
+                }
+        }
+        printf("SumA= %d", sumA);
+        printf("SumB= %d", sumB);
+        printf("SumC= %d", sumC);
+        printf("SumD= %d", sumD);
+}
+//-------------------------------------
 // Trace of a Matrix using OpenMP
 #include <stdio.h>
 #include <stdlib.h>
