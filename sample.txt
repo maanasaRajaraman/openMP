@@ -114,3 +114,59 @@ int main() {
     printf("Final value of sharedVar (sum of thread IDs): %d\n", sharedVar);
     return 0;
 }
+//-----------------------------------
+//Fibonacci 
+#include <stdio.h>
+#include <omp.h>
+
+#define N 40  // Compute Fibonacci(N)
+
+// Sequential Fibonacci (Recursive)
+long long fibonacci_sequential(int n) {
+    if (n <= 1)
+        return n;
+    return fibonacci_sequential(n - 1) + fibonacci_sequential(n - 2);
+}
+
+// Parallel Fibonacci using OpenMP Tasks
+long long fibonacci_parallel(int n) {
+    if (n <= 1)
+        return n;
+
+    long long x, y;
+
+    #pragma omp task shared(x)
+    x = fibonacci_parallel(n - 1);
+
+    #pragma omp task shared(y)
+    y = fibonacci_parallel(n - 2);
+
+    #pragma omp taskwait
+    return x + y;
+}
+
+int main() {
+    double start, end;
+    long long result_seq, result_par;
+
+    // Sequential Fibonacci
+    start = omp_get_wtime();
+    result_seq = fibonacci_sequential(N);
+    end = omp_get_wtime();
+    printf("Sequential Fibonacci(%d) = %lld\n", N, result_seq);
+    printf("Sequential Time: %f seconds\n", end - start);
+
+    // Parallel Fibonacci
+    start = omp_get_wtime();
+    #pragma omp parallel
+    {
+        #pragma omp single
+        result_par = fibonacci_parallel(N);
+    }
+    end = omp_get_wtime();
+    printf("Parallel Fibonacci(%d) = %lld\n", N, result_par);
+    printf("Parallel Time: %f seconds\n", end - start);
+
+    return 0;
+}
+
