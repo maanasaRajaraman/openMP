@@ -1,0 +1,12 @@
+int id = omp_get_thread_num();
+int total_threads = omp_get_num_threads();
+int max_threads = omp_get_max_threads();
+int processors = omp_get_num_procs();
+
+double start = omp_get_wtime();
+double end = omp_get_wtime();
+printf("Time: %f seconds\n", end - start);
+
+double precision = omp_get_wtick();
+
+export OMP_NUM_THREADS=4
