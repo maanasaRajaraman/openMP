@@ -1,17 +1,17 @@
+// FFT
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <omp.h>
 
 #define PI 3.14159265358979323846
-#define N 1024  // FFT size
 
 typedef struct {
     double real;
     double imag;
 } Complex;
 
-// Function to perform complex multiplication
+// Complex multiplication
 Complex complex_mul(Complex a, Complex b) {
     Complex result;
     result.real = a.real * b.real - a.imag * b.imag;
@@ -20,7 +20,7 @@ Complex complex_mul(Complex a, Complex b) {
 }
 
 // Sequential FFT
-void fft_sequential(Complex *X) {
+void fft_sequential(Complex *X, int N) {
     for (int s = 1; s <= log2(N); s++) {
         int m = 1 << s;
         double angle = -2.0 * PI / m;
@@ -40,7 +40,7 @@ void fft_sequential(Complex *X) {
 }
 
 // Parallel FFT using OpenMP
-void fft_parallel(Complex *X) {
+void fft_parallel(Complex *X, int N) {
     for (int s = 1; s <= log2(N); s++) {
         int m = 1 << s;
         double angle = -2.0 * PI / m;
@@ -60,23 +60,59 @@ void fft_parallel(Complex *X) {
     }
 }
 
-int main() {
-    Complex data_seq[N], data_par[N];
+// Check if a number is a power of 2
+int is_power_of_two(int n) {
+    return (n && !(n & (n - 1)));
+}
 
-    // Initialize input data
-    for (int i = 0; i < N; i++) {
-        data_seq[i].real = data_par[i].real = sin(2 * PI * i / N);
-        data_seq[i].imag = data_par[i].imag = 0.0;
+int main() {
+    int N;
+    printf("Enter FFT size (power of 2): ");
+    scanf("%d", &N);
+
+    if (!is_power_of_two(N)) {
+        printf("Error: FFT size must be a power of 2.\n");
+        return -1;
+    }
+
+    Complex *data_seq = (Complex *)malloc(N * sizeof(Complex));
+    Complex *data_par = (Complex *)malloc(N * sizeof(Complex));
+
+    int choice;
+    printf("Choose data type:\n");
+    printf("1. Sine Wave\n2. Random Data\n3. Manual Input\n");
+    printf("Enter your choice: ");
+    scanf("%d", &choice);
+
+    if (choice == 1) {
+        for (int i = 0; i < N; i++) {
+            data_seq[i].real = data_par[i].real = sin(2 * PI * i / N);
+            data_seq[i].imag = data_par[i].imag = 0.0;
+        }
+    } else if (choice == 2) {
+        for (int i = 0; i < N; i++) {
+            data_seq[i].real = data_par[i].real = (rand() % 100) / 10.0;
+            data_seq[i].imag = data_par[i].imag = (rand() % 100) / 10.0;
+        }
+    } else if (choice == 3) {
+        for (int i = 0; i < N; i++) {
+            printf("Enter real and imaginary parts for element %d: ", i);
+            scanf("%lf %lf", &data_seq[i].real, &data_seq[i].imag);
+            data_par[i] = data_seq[i];  // Copy for parallel
+        }
+    } else {
+        printf("Invalid choice.\n");
+        return -1;
     }
 
     // Sequential FFT
     double seq_start = omp_get_wtime();
-    fft_sequential(data_seq);
+    fft_sequential(data_seq, N);
     double seq_end = omp_get_wtime();
 
     // Parallel FFT
     double par_start = omp_get_wtime();
-    fft_parallel(data_par);
+    fft_parallel(data_par, N);
     double par_end = omp_get_wtime();
 
     // Verify correctness
@@ -89,10 +125,13 @@ int main() {
         }
     }
 
-    // Print results
-    printf("Sequential FFT Time: %.6f seconds\n", seq_end - seq_start);
+    // Output
+    printf("\nSequential FFT Time: %.6f seconds\n", seq_end - seq_start);
     printf("Parallel FFT Time:   %.6f seconds\n", par_end - par_start);
     printf("Correctness Check: %s\n", correct ? "PASS" : "FAIL");
+
+    free(data_seq);
+    free(data_par);
 
     return 0;
 }
