@@ -31,14 +31,12 @@ Parallel Reduction for Maximum Value
 Parallel Prefix Sum
 BFS
 Floyd Warshall
--------------------------------------------------
-sample2.txt
+
 Word Count in a Large Text File
 Solving a Triangular System
 Factorial
 Dot Product
-------------------------------------------------
-sample3.txt
+
 Histogram Calculation
 Parallel Sieve of Eratosthenes
 ------------------------------------------------
