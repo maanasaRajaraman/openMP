@@ -11,12 +11,14 @@ numerical integration
 n queens
 Mandelbrot
 pseudo random number generator
+m colouring
 ------------------------------------------------
 matrix.txt
 Matrix multiplication
 Parallel Matrix Determinant Calculation
 Parallel Convolution of Two Matrices 
 Matrix transposition
+Trace Calculation
 ------------------------------------------------
 sample.txt
 sum of natural numbers (for and reduction)
