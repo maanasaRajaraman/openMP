@@ -1,3 +1,61 @@
+// Trace of a Matrix using OpenMP
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define SIZE 1000  // Define matrix size
+
+// Function to calculate the trace sequentially
+int trace_sequential(int matrix[SIZE][SIZE]) {
+    int trace = 0;
+    for (int i = 0; i < SIZE; i++) {
+        trace += matrix[i][i];
+    }
+    return trace;
+}
+
+// Function to calculate the trace using OpenMP
+int trace_parallel(int matrix[SIZE][SIZE]) {
+    int trace = 0;
+    #pragma omp parallel for reduction(+:trace)
+    for (int i = 0; i < SIZE; i++) {
+        trace += matrix[i][i];
+    }
+    return trace;
+}
+
+int main() {
+    int matrix[SIZE][SIZE];
+
+    // Initialize matrix with random values
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            matrix[i][j] = rand() % 100;
+        }
+    }
+
+    double start, end;
+
+    // Sequential Trace Calculation
+    start = omp_get_wtime();
+    int trace_seq = trace_sequential(matrix);
+    end = omp_get_wtime();
+    printf("Sequential Trace: %d\n", trace_seq);
+    printf("Sequential Time: %f seconds\n", end - start);
+
+    // Parallel Trace Calculation
+    start = omp_get_wtime();
+    int trace_par = trace_parallel(matrix);
+    end = omp_get_wtime();
+    printf("Parallel Trace: %d\n", trace_par);
+    printf("Parallel Time: %f seconds\n", end - start);
+
+    // Correctness Check
+    printf("Correctness Check: %s\n", (trace_seq == trace_par) ? "PASS" : "FAIL");
+
+    return 0;
+}
+//--------------------------------------------
 // Parallel vs Sequential Matrix Multiplication
 #include <stdio.h>
 #include <stdlib.h>
